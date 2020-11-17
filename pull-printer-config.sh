@@ -2,37 +2,47 @@
 #
 # (c) Copyright PaperCut Software, 2007
 #
-# Author: Chris Dance (chris.dance <a> papercut.com)
-# A simple script to copy printer configuration from one Apple Mac OS X 
+# Author: Valentino Lauciani (vlauciani@gmail.com)
+# Starting from an idea of: Chris Dance (chris.dance <a> papercut.com) -> https://www.papercut.com/kb/Main/CopyingPrinterConfigOnTheMac#the-script
+# A simple script to copy printers and configurations from one Apple Mac OS X 
 # system to another.
 #
 
 TARGET_HOST=`hostname`
-SRC_HOST=$1
-SRC_USER=root
+SOURCE_HOST=
+SOURCE_USER=
 
-if [ -z "${SRC_HOST}" ]; then
+if [ -z "${1}" ]; then
     echo
-    echo "USAGE: pull-printer-config SOURCE [USER]"
-    echo "    SOURCE: The remote system whose printer config you'd like to copy."
-    echo "    USER: An admin level user on the source system. If not defined root is used."
+    echo "USAGE: pull-printer-config <SOURCE_HOST> <SOURCE_USER>"
+    echo "    SOURCE_HOST: The remote system whose printer config you'd like to copy."
+    echo "    SOURCE_USER: An user on SOURCE_HOST with admin privilege"
     echo
+    exit 1
+else
+    SRC_HOST=${1}
+fi
+
+if [ -z "$2" ]; then
+    echo
+    echo "USAGE: pull-printer-config <SOURCE_HOST> <SOURCE_USER>"
+    echo "    SOURCE_HOST: The remote system whose printer config you'd like to copy."
+    echo "    SOURCE_USER: An user on SOURCE_HOST with admin privilege"
+    echo
+    exit 1
+else
+    SRC_USER=${2}
+fi
+
+USERID=`id | sed "s/^uid=\([0-9][0-9]*\).*$/\1/"`
+if test "${USERID}" -ne 0; then
+    echo "Error: Please run this script as admin privilete (e.g. sudo ./pull-printer-config.sh)" 1>&2
     exit 1
 fi
 
-if [ ! -z "$2" ]; then
-    SRC_USER=$2
-fi
 
-userid=`id | sed "s/^uid=\([0-9][0-9]*\).*$/\1/"`
-if test "${userid}" -ne 0; then
-    echo "Error: Please run this script as root (e.g. sudo pull-printer-config)" 1>&2
-    exit 1
-fi
-
-
-echo "Copying printer configuration from ${SRC_HOST} to ${TARGET_HOST}."
-echo "Enter the password for the user ${SRC_USER} on ${SRC_HOST} if requested."
+echo "Copying printer configuration from ${SOURCE_HOST} to ${TARGET_HOST}."
+echo "Enter the password for the user ${SOURCE_USER} on ${SOURCE_HOST} if requested."
 echo "You may be requested for your password multiple times."
 echo 
 
@@ -41,9 +51,9 @@ echo
 # owner.
 #
 echo "Preparing config on source server..."
-ssh -t "${SRC_USER}@${SRC_HOST}" \
+ssh -t "${SOURCE_USER}@${SOURCE_HOST}" \
     "sudo sh -c \
-    \"rm -fr /tmp/cupstmp; cp -R /etc/cups/ /tmp/cupstmp; chown -R ${SRC_USER} /tmp/cupstmp\""
+    \"rm -fr /tmp/cupstmp; cp -R /etc/cups/ /tmp/cupstmp; chown -R ${SOURCE_USER} /tmp/cupstmp\""
 
 if [ "$?" -ne "0" ]; then
     echo "Error: Unable to source config of remote system" 1>&2
@@ -54,13 +64,14 @@ fi
 # Use scp to copy our temp copy over to our local system.
 #
 echo "Copying config..."
-
-rm -fr /etc/cupstmp >/dev/null 2>&1
+if [ -d /etc/cupstmp ]; then
+    rm -fr /etc/cupstmp >/dev/null 2>&1
+fi
 
 #
 # Move old config
 #
-scp -rpq "${SRC_USER}@${SRC_HOST}:/tmp/cupstmp/" "/etc/cupstmp"
+sudo scp -rpq "${SOURCE_USER}@${SOURCE_HOST}:/tmp/cupstmp/" "/etc/cupstmp"
 if [ ! -d /etc/cupstmp  ]; then
     #
     # Error so restore our backup
