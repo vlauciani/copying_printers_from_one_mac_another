@@ -81,7 +81,7 @@ if [ ! -d /etc/cupstmp  ]; then
 fi
 
 datestamp=`date +%y%m%d`
-mv /etc/cups "/etc/cups${datestamp}" && mv /etc/cupstmp /etc/cups
+sudo mv /etc/cups "/etc/cups${datestamp}" && mv /etc/cupstmp /etc/cups
 
 #
 # Restart the CUPS server so it picks up our new config.
