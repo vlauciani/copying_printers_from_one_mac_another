@@ -18,5 +18,6 @@ I've updated the script to copy printers and config from an old Apple Mac to the
 $ cd
 $ git clone https://github.com/vlauciani/copying_printers_from_one_mac_another.git
 $ cd copying_printers_from_one_mac_another
+$ sh ./pull-printer-config.sh
 ```
 
